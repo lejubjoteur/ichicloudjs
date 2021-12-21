@@ -1,0 +1,17 @@
+{
+  "name": "WolfStreetBot",
+  "version": "1.0.0",
+  "description": "",
+  "main": "app.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "axios": "^0.24.0",
+    "ccxt": "^1.64.49",
+    "dotenv": "^10.0.0"
+  }
+}
