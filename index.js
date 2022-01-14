@@ -28,6 +28,19 @@ async function getBacktestDB() {
 
 // --------------- Functions for Ichimoku ---------------
 
+async function getAverageInterval(candles, index, interval) {
+	let hight = 0;
+	let low = -1;
+	for (let i = index; i <= interval; i++) {
+		if (hight < candles[candles.length - i][2])
+			hight = candles[candles.length - i][2]
+		if (low == -1 || low > candles[candles.length - i][3])
+			low = candles[candles.length - i][3]
+	}
+	let average = ((parseFloat(hight) + parseFloat(low)) / 2);
+	return average;
+}
+
 // Highest and Lowest price since 9periods in past
 async function getConversionLine(candles) {
 	let hight = 0;
@@ -203,7 +216,7 @@ async function ichimokuCloud(candles) {
 			let takeProfit = (lastPrice - stopLoss) * 100 / lastPrice * 1.5 * lastPrice / 100 + lastPrice
 			let order = new Order(candles[candles.length - 1][0], lastPrice, stopLoss, takeProfit, true);
 			orders.push(order);
-			console.log(lastOrder);
+			console.log(new Date(orders.slice(-1)[0].date).toString());
 			return true;
 		}
 	else if (conversionLine < baseLine
@@ -217,7 +230,7 @@ async function ichimokuCloud(candles) {
 			let takeProfit = (lastPrice - stopLoss) * 100 / lastPrice * 1.5 * lastPrice / 100 + lastPrice
 			let order = new Order(candles[candles.length - 1][0], lastPrice, stopLoss, takeProfit, false);
 			orders.push(order);
-			console.log(lastOrder);
+			console.log(new Date(orders.slice(-1)[0].date).toString());
 			return true;
 		}
 	else
