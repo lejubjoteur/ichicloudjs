@@ -73,6 +73,31 @@ async function newOrder(candles, lastPrice, stopLoss, typePosition) {
 	return true
 }
 
+// --------------- RSI Indicator ---------------
+
+//average gain on a periods
+// let averageGain
+// let averageLoss
+// let rsiStep1 = 100 - (100 / (1 + averageGain / averageLoss))
+// let rsiStep2 = 100 - (100 / (1 + (averageGain * 13 + currentGain) / (averageLoss * 13 + currentLoss)))
+
+// --------------- Ema Indicator ---------------
+
+async function getSumPrices(candles, pediods) {
+	let total = 0;
+	for (let i = 0; i < pediods; i++)
+		total += parseFloat(candles[candles.length - 1 - i][4])
+	return total
+}
+
+async function getEma(candles, periods) {
+	let lastPrice = candles[candles.length - 1][4];
+	let emaY = await getSumPrices(candles, periods) / periods;
+	let multi = 2 / (periods + 1);
+	let ema = parseFloat(lastPrice) * parseFloat(multi) + parseFloat(emaY) * parseFloat(1 - multi)
+	return ema
+}
+
 // --------------- Ichimoku Indicator ---------------
 
 async function ichimokuCloud(candles) {
@@ -99,6 +124,7 @@ async function ichimokuCloud(candles) {
 	// console.log("lastPrice :" + "\x1b[36m", lastPrice,'\x1b[0m', "old26SpanA :" + "\x1b[32m", old26SpanA, '\x1b[0m', "old26SpanB :" + "\x1b[31m", old26SpanB, '\x1b[0m')
 
 	let lastOrder = orders.slice(-1)[0];
+	let ema200 = await getEma(candles, 200);
 
 	if (conversionLine > baseLine
 		&& leadingSpanA > leadingSpanB
@@ -106,6 +132,7 @@ async function ichimokuCloud(candles) {
 		&& laggingSpan > old52SpanA && laggingSpan > old52SpanB
 		&& (!lastOrder || lastOrder.long == false)
 		&& lastPrice > parseFloat(candles[candles.length - 2][4])
+		// && lastPrice > ema200
 	) {
 			console.log("\x1b[32m" + "LONG! LONG! LONG!", '\x1b[0m')
 			// let stopLoss = old26SpanB;
@@ -119,6 +146,7 @@ async function ichimokuCloud(candles) {
 		&& laggingSpan < old52SpanA && laggingSpan < old52SpanB
 		&& (!lastOrder || lastOrder.long == true)
 		&& lastPrice < parseFloat(candles[candles.length - 2][4])
+		// && lastPrice < ema200
 	) {
 			console.log("\x1b[31m" + "SHORT! SHORT! SHORT!", '\x1b[0m')
 			// let stopLoss = old26SpanA;
@@ -135,6 +163,7 @@ class Order {
 	leverage = 1
 	currentPrice = 0
 	endDate
+	fees = 0
 
 	constructor(startDate, priceOrder, stopLoss, takeProfit, long) {
 		this.startDate = startDate;
@@ -148,23 +177,27 @@ class Order {
 		this.profit = (this.priceOrder - this.stopLoss) * 100 / this.priceOrder;
 		if (this.long)
 			this.profit = -this.profit
-		this.profit = this.profit * this.leverage
-		console.log("WIN")
+		this.profit = this.profit * this.leverage - this.fees
+		console.log(this.endDate)
+		console.log("Current price : " + this.currentPrice)
+		console.log("LOOSE " + this.profit)
 	}
 
 	goodTrade() {
 		this.profit = (this.priceOrder - this.takeProfit) * 100 / this.priceOrder;
 		if (this.long)
 			this.profit = -this.profit
-		this.profit = this.profit * this.leverage
-		console.log("LOOSE")
+		this.profit = this.profit * this.leverage - this.fees
+		console.log(this.endDate)
+		console.log("Current price : " + this.currentPrice)
+		console.log("WIN " + this.profit)
 	}
 
 	cancelOrder() {
 		this.profit = (this.priceOrder - this.currentPrice) * 100 / this.priceOrder;
 		if (this.long)
 			this.profit = -this.profit
-		this.profit = this.profit * this.leverage
+		this.profit = this.profit * this.leverage - this.fees
 		console.log(this.endDate)
 		console.log("Current price : " + this.currentPrice)
 		console.log("CANCELED ! Profit : " + this.profit)
@@ -176,14 +209,14 @@ class Order {
 async function main() {
 	// let candles = await getCandles()
 	// let testdb = await getBacktestDB();
-	// await write(testdb, 'D:/Documents HDD/learnJS/wolfstreetbot/test.txt');
+	// await write(testdb, 'D:/Documents HDD/learnJS/wolfstreetbot/h1t2019.txt');
 	let db = await read('D:/Documents HDD/learnJS/wolfstreetbot/test.txt');
 	let candles = [];
 
 	let position = false;
 
-	while (db.length > 200) {
-		candles = db.slice(0, 200)
+	while (db.length > 250) {
+		candles = db.slice(0, 250)
 		if (!position)
 			position = await ichimokuCloud(candles);
 		else {
@@ -192,6 +225,8 @@ async function main() {
 			let conversionLine = await getAverageInterval(candles, 1, 9)
 			let baseLine = await getAverageInterval(candles, 1, 26)
 			position = false;
+			lastOrder.currentPrice = lastCandle[4];
+			lastOrder.endDate = new Date(lastCandle[0]).toString();
 			if (lastOrder.long && lastCandle[2] >= lastOrder.takeProfit)
 				lastOrder.goodTrade();
 			else if (lastOrder.long && lastCandle[3] <= lastOrder.stopLoss)
@@ -201,28 +236,25 @@ async function main() {
 			else if (!lastOrder.long && lastCandle[2] >= lastOrder.stopLoss)
 				lastOrder.badTrade();
 			else if((!lastOrder.long && conversionLine > baseLine)
-				|| (lastOrder.long && conversionLine < baseLine)) {
-				lastOrder.currentPrice = lastCandle[4];
-				lastOrder.endDate = new Date(lastCandle[0]).toString();
+				|| (lastOrder.long && conversionLine < baseLine))
 				lastOrder.cancelOrder();
-			}
 			else
 				position = true;
 		}
 		db.shift()
 	}
-		console.log("Trades Win : " + orders.reduce((a, b) => {
-			if (b.profit > 0)
-				return a + 1
-			else
-				return a
-		}, 0))
-		console.log("Orders : " + orders.length)
-		let profits = 0;
-		for (let order of orders) {
-			profits = parseFloat(profits) + parseFloat(order.profit)
-		}
-		console.log("Profits : " + profits.toFixed(2) + "%")
+	let profits = 0;
+	for (let order of orders) {
+		profits = parseFloat(profits) + parseFloat(order.profit)
+	}
+	console.log("Profits : " + profits.toFixed(2) + "%")
+	console.log("Trades Win : " + orders.reduce((a, b) => {
+		if (b.profit > 0)
+			return a + 1
+		else
+			return a
+	}, 0))
+	console.log("Orders : " + orders.length)
 	// var csv = orders.map(function(d){
 	// 	return JSON.stringify(Object.values(d));
 	// })
