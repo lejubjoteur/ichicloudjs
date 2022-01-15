@@ -4,6 +4,7 @@ const { Spot } = require('@binance/connector')
 const apiKey = 'p7KiUy19KhoaeVwfi40qpmFiOppqdRcK0mqJfhjqDgheb66RJGAYQfexJ42cvyNk'
 const apiSecret = 'Pl3FFVCZa0bFL6NKuJp2ustRfJeHyJ06a0OGUZBTaC8oDOvGlC0jm9ghMgKmzzs1'
 const client = new Spot(apiKey, apiSecret)
+const fs = require('fs')
 
 // --------------- Request API to get Candles ---------------
 
@@ -17,13 +18,22 @@ async function getCandles() {
 
 async function getBacktestDB() {
 	let db = [];
-	let timestamp = Date.parse('01 nov 2021');
-	for (let i = 0; i < 20; i++) {
+	let timestamp = Date.parse('01 jan 2021');
+	for (let i = 0; i < 105; i++) {
 		let response = await client.klines('BTCUSDT', '5m', {startTime: timestamp, limit: 1000})
 		db.push(...response.data)
 		timestamp = response.data[response.data.length - 1][0] + 5 * 60 * 1000;
 	}
 	return db
+}
+
+async function write(arr, path) {
+	fs.writeFileSync(path, JSON.stringify(arr));
+}
+
+async function read(path) {
+	let data = JSON.parse(fs.readFileSync(path));
+	return data;
 }
 
 // --------------- Functions for Ichimoku ---------------
@@ -52,10 +62,11 @@ async function getLastPrice(candles) {
 let orders = [];
 
 async function newOrder(candles, lastPrice, stopLoss, typePosition) {
-	let takeProfit = (lastPrice - stopLoss) * 100 / lastPrice * 1.5 * lastPrice / 100 + lastPrice
-	let order = new Order(candles[candles.length - 1][0], lastPrice, stopLoss, takeProfit, typePosition);
+	let ratio = 1.5;
+	let takeProfit = (lastPrice - stopLoss) * 100 / lastPrice * ratio * lastPrice / 100 + lastPrice
+	let order = new Order(new Date(candles[candles.length - 1][0]).toString(), lastPrice, stopLoss, takeProfit, typePosition);
 	orders.push(order);
-	console.log(new Date(orders.slice(-1)[0].date).toString());
+	console.log(new Date(orders.slice(-1)[0].startDate).toString());
 	console.log("Price Order :", orders.slice(-1)[0].priceOrder);
 	console.log("Take profit :", orders.slice(-1)[0].takeProfit);
 	console.log("Stop loss :", orders.slice(-1)[0].stopLoss);
@@ -64,7 +75,6 @@ async function newOrder(candles, lastPrice, stopLoss, typePosition) {
 
 // --------------- Ichimoku Indicator ---------------
 
-// All that we need for ichimoku strategy
 async function ichimokuCloud(candles) {
 	let conversionLine = await getAverageInterval(candles, 1, 9);
 	let baseLine = await getAverageInterval(candles, 1, 26);
@@ -97,8 +107,10 @@ async function ichimokuCloud(candles) {
 		&& (!lastOrder || lastOrder.long == false)
 		&& lastPrice > parseFloat(candles[candles.length - 2][4])
 	) {
-			console.log("\x1b[32m" + "Buy! Buy! Buy!", '\x1b[0m')
-			let stopLoss = old26SpanB;
+			console.log("\x1b[32m" + "LONG! LONG! LONG!", '\x1b[0m')
+			// let stopLoss = old26SpanB;
+			let stopLoss = baseLine;
+			// let stopLoss = parseFloat(lastPrice) - parseFloat(lastPrice * 0.80 / 100);
 			return newOrder(candles, lastPrice, stopLoss, true);
 		}
 	else if (conversionLine < baseLine
@@ -108,8 +120,10 @@ async function ichimokuCloud(candles) {
 		&& (!lastOrder || lastOrder.long == true)
 		&& lastPrice < parseFloat(candles[candles.length - 2][4])
 	) {
-			console.log("\x1b[31m" + "Sell! Sell! Sell!", '\x1b[0m')
-			let stopLoss = old26SpanA;
+			console.log("\x1b[31m" + "SHORT! SHORT! SHORT!", '\x1b[0m')
+			// let stopLoss = old26SpanA;
+			let stopLoss = baseLine;
+			// let stopLoss = parseFloat(lastPrice * 0.80 / 100) + parseFloat(lastPrice);
 			return newOrder(candles, lastPrice, stopLoss, false);
 		}
 	else
@@ -119,9 +133,11 @@ async function ichimokuCloud(candles) {
 class Order {
 	profit = 0
 	leverage = 1
+	currentPrice = 0
+	endDate
 
-	constructor(date, priceOrder, stopLoss, takeProfit, long) {
-		this.date = date;
+	constructor(startDate, priceOrder, stopLoss, takeProfit, long) {
+		this.startDate = startDate;
 		this.priceOrder = priceOrder;
 		this.stopLoss = stopLoss;
 		this.takeProfit = takeProfit;
@@ -133,7 +149,7 @@ class Order {
 		if (this.long)
 			this.profit = -this.profit
 		this.profit = this.profit * this.leverage
-		console.log("bad")
+		console.log("WIN")
 	}
 
 	goodTrade() {
@@ -141,13 +157,27 @@ class Order {
 		if (this.long)
 			this.profit = -this.profit
 		this.profit = this.profit * this.leverage
-		console.log("good")
+		console.log("LOOSE")
+	}
+
+	cancelOrder() {
+		this.profit = (this.priceOrder - this.currentPrice) * 100 / this.priceOrder;
+		if (this.long)
+			this.profit = -this.profit
+		this.profit = this.profit * this.leverage
+		console.log(this.endDate)
+		console.log("Current price : " + this.currentPrice)
+		console.log("CANCELED ! Profit : " + this.profit)
 	}
 }
 
+// --------------- Backtest environment ---------------
+
 async function main() {
 	// let candles = await getCandles()
-	let db = await getBacktestDB();
+	// let testdb = await getBacktestDB();
+	// await write(testdb, 'D:/Documents HDD/learnJS/wolfstreetbot/test.txt');
+	let db = await read('D:/Documents HDD/learnJS/wolfstreetbot/test.txt');
 	let candles = [];
 
 	let position = false;
@@ -159,6 +189,8 @@ async function main() {
 		else {
 			let lastOrder = orders.slice(-1)[0]
 			let lastCandle = candles.slice(-1)[0]
+			let conversionLine = await getAverageInterval(candles, 1, 9)
+			let baseLine = await getAverageInterval(candles, 1, 26)
 			position = false;
 			if (lastOrder.long && lastCandle[2] >= lastOrder.takeProfit)
 				lastOrder.goodTrade();
@@ -168,6 +200,12 @@ async function main() {
 				lastOrder.goodTrade();
 			else if (!lastOrder.long && lastCandle[2] >= lastOrder.stopLoss)
 				lastOrder.badTrade();
+			else if((!lastOrder.long && conversionLine > baseLine)
+				|| (lastOrder.long && conversionLine < baseLine)) {
+				lastOrder.currentPrice = lastCandle[4];
+				lastOrder.endDate = new Date(lastCandle[0]).toString();
+				lastOrder.cancelOrder();
+			}
 			else
 				position = true;
 		}
@@ -185,6 +223,12 @@ async function main() {
 			profits = parseFloat(profits) + parseFloat(order.profit)
 		}
 		console.log("Profits : " + profits.toFixed(2) + "%")
+	// var csv = orders.map(function(d){
+	// 	return JSON.stringify(Object.values(d));
+	// })
+	// .join("/n")
+	// .replace(/(^\[)|(\]$)/mg, '');
+	// await write(csv, 'D:/Documents HDD/learnJS/wolfstreetbot/orders.csv');
 }
 
 main();
