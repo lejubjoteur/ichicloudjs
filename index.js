@@ -126,12 +126,15 @@ async function ichimokuCloud(candles) {
 	let lastOrder = orders.slice(-1)[0];
 	let ema200 = await getEma(candles, 200);
 
-	if (conversionLine > baseLine
-		&& leadingSpanA > leadingSpanB
-		&& lastPrice > old26SpanA && lastPrice > old26SpanB
-		&& laggingSpan > old52SpanA && laggingSpan > old52SpanB
-		&& (!lastOrder || lastOrder.long == false)
-		&& lastPrice > parseFloat(candles[candles.length - 2][4])
+	if (
+		// conversionLine > baseLine &&
+		leadingSpanA > leadingSpanB &&
+		lastPrice > old26SpanA &&
+		lastPrice > old26SpanB &&
+		laggingSpan > old52SpanA &&
+		laggingSpan > old52SpanB &&
+		(!lastOrder || lastOrder.long == false) &&
+		lastPrice > parseFloat(candles[candles.length - 2][4])
 		// && lastPrice > ema200
 	) {
 			console.log("\x1b[32m" + "LONG! LONG! LONG!", '\x1b[0m')
@@ -140,12 +143,15 @@ async function ichimokuCloud(candles) {
 			// let stopLoss = parseFloat(lastPrice) - parseFloat(lastPrice * 0.80 / 100);
 			return newOrder(candles, lastPrice, stopLoss, true);
 		}
-	else if (conversionLine < baseLine
-		&& leadingSpanA < leadingSpanB
-		&& lastPrice < old26SpanA && lastPrice < old26SpanB
-		&& laggingSpan < old52SpanA && laggingSpan < old52SpanB
-		&& (!lastOrder || lastOrder.long == true)
-		&& lastPrice < parseFloat(candles[candles.length - 2][4])
+	else if (
+		// conversionLine < baseLine &&
+		leadingSpanA < leadingSpanB &&
+		lastPrice < old26SpanA &&
+		lastPrice < old26SpanB &&
+		laggingSpan < old52SpanA &&
+		laggingSpan < old52SpanB &&
+		(!lastOrder || lastOrder.long == true) &&
+		lastPrice < parseFloat(candles[candles.length - 2][4])
 		// && lastPrice < ema200
 	) {
 			console.log("\x1b[31m" + "SHORT! SHORT! SHORT!", '\x1b[0m')
@@ -209,8 +215,8 @@ class Order {
 async function main() {
 	// let candles = await getCandles()
 	// let testdb = await getBacktestDB();
-	// await write(testdb, 'D:/Documents HDD/learnJS/wolfstreetbot/h1t2019.txt');
-	let db = await read('D:/Documents HDD/learnJS/wolfstreetbot/test.txt');
+	// await write(testdb, 'D:/Documents HDD/learnJS/wolfstreetbot/fileTest/h1t2019.txt');
+	let db = await read('D:/Documents HDD/learnJS/wolfstreetbot/fileTest/2021h1.txt');
 	let candles = [];
 
 	let position = false;
@@ -224,6 +230,8 @@ async function main() {
 			let lastCandle = candles.slice(-1)[0]
 			let conversionLine = await getAverageInterval(candles, 1, 9)
 			let baseLine = await getAverageInterval(candles, 1, 26)
+			let old26SpanA = await getAverageInterval();
+			let old26SpanB = await getAverageInterval();
 			position = false;
 			lastOrder.currentPrice = lastCandle[4];
 			lastOrder.endDate = new Date(lastCandle[0]).toString();
@@ -235,9 +243,9 @@ async function main() {
 				lastOrder.goodTrade();
 			else if (!lastOrder.long && lastCandle[2] >= lastOrder.stopLoss)
 				lastOrder.badTrade();
-			else if((!lastOrder.long && conversionLine > baseLine)
-				|| (lastOrder.long && conversionLine < baseLine))
-				lastOrder.cancelOrder();
+			// else if((!lastOrder.long && conversionLine > baseLine)
+			// 	|| (lastOrder.long && conversionLine < baseLine))
+			// 	lastOrder.cancelOrder();
 			else
 				position = true;
 		}
@@ -247,20 +255,16 @@ async function main() {
 	for (let order of orders) {
 		profits = parseFloat(profits) + parseFloat(order.profit)
 	}
-	console.log("Profits : " + profits.toFixed(2) + "%")
-	console.log("Trades Win : " + orders.reduce((a, b) => {
+	let tradesWin = orders.reduce((a, b) => {
 		if (b.profit > 0)
 			return a + 1
 		else
 			return a
-	}, 0))
+	}, 0)
+	console.log("\nProfits : " + profits.toFixed(2) + "%")
+	console.log("Trades Win : " + tradesWin)
 	console.log("Orders : " + orders.length)
-	// var csv = orders.map(function(d){
-	// 	return JSON.stringify(Object.values(d));
-	// })
-	// .join("/n")
-	// .replace(/(^\[)|(\]$)/mg, '');
-	// await write(csv, 'D:/Documents HDD/learnJS/wolfstreetbot/orders.csv');
+	console.log("Winrate : " + (tradesWin / orders.length * 100).toFixed(2) + "%")
 }
 
 main();
