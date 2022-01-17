@@ -82,6 +82,7 @@ async function newOrder(candles, lastPrice, stopLoss, typePosition) {
 // let rsiStep2 = 100 - (100 / (1 + (averageGain * 13 + currentGain) / (averageLoss * 13 + currentLoss)))
 
 // --------------- Ema Indicator ---------------
+// doesn't work
 
 async function getSumPrices(candles, pediods) {
 	let total = 0;
@@ -131,11 +132,11 @@ async function ichimokuCloud(candles) {
 		leadingSpanA > leadingSpanB &&
 		lastPrice > old26SpanA &&
 		lastPrice > old26SpanB &&
+		lastPrice > baseLine &&
 		laggingSpan > old52SpanA &&
 		laggingSpan > old52SpanB &&
 		(!lastOrder || lastOrder.long == false) &&
 		lastPrice > parseFloat(candles[candles.length - 2][4])
-		// && lastPrice > ema200
 	) {
 			console.log("\x1b[32m" + "LONG! LONG! LONG!", '\x1b[0m')
 			// let stopLoss = old26SpanB;
@@ -148,11 +149,11 @@ async function ichimokuCloud(candles) {
 		leadingSpanA < leadingSpanB &&
 		lastPrice < old26SpanA &&
 		lastPrice < old26SpanB &&
+		lastPrice < baseLine &&
 		laggingSpan < old52SpanA &&
 		laggingSpan < old52SpanB &&
 		(!lastOrder || lastOrder.long == true) &&
 		lastPrice < parseFloat(candles[candles.length - 2][4])
-		// && lastPrice < ema200
 	) {
 			console.log("\x1b[31m" + "SHORT! SHORT! SHORT!", '\x1b[0m')
 			// let stopLoss = old26SpanA;
@@ -219,8 +220,8 @@ async function main() {
 	// await write(testdb, 'D:/Documents HDD/learnJS/wolfstreetbot/fileTest/2021h1.txt');
 	// await write(testdb, '/mnt/nfs/homes/qgimenez/Documents/WolfStreetBot/fileTest/2018h4.txt');
 	
-	// let db = await read('D:/Documents HDD/learnJS/wolfstreetbot/fileTest/2021h1.txt');
-	let db = await read('/mnt/nfs/homes/qgimenez/Documents/WolfStreetBot/fileTest/2018h1.txt');
+	let db = await read('D:/Documents HDD/learnJS/wolfstreetbot/fileTest/2021h1.txt');
+	// let db = await read('/mnt/nfs/homes/qgimenez/Documents/WolfStreetBot/fileTest/2018h1.txt');
 
 	let candles = [];
 
@@ -248,9 +249,6 @@ async function main() {
 				lastOrder.goodTrade();
 			else if (!lastOrder.long && lastCandle[2] >= lastOrder.stopLoss)
 				lastOrder.badTrade();
-			// else if((!lastOrder.long && conversionLine > baseLine)
-			// 	|| (lastOrder.long && conversionLine < baseLine))
-			// 	lastOrder.cancelOrder();
 			else
 				position = true;
 		}
