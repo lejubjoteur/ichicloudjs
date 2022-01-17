@@ -18,11 +18,11 @@ async function getCandles() {
 
 async function getBacktestDB() {
 	let db = [];
-	let timestamp = Date.parse('01 jan 2021');
-	for (let i = 0; i < 105; i++) {
-		let response = await client.klines('BTCUSDT', '5m', {startTime: timestamp, limit: 1000})
+	let timestamp = Date.parse('01 jan 2018');
+	for (let i = 0; i < 10; i++) {
+		let response = await client.klines('BTCUSDT', '4h', {startTime: timestamp, limit: 1000})
 		db.push(...response.data)
-		timestamp = response.data[response.data.length - 1][0] + 5 * 60 * 1000;
+		timestamp = response.data[response.data.length - 1][0];
 	}
 	return db
 }
@@ -215,8 +215,13 @@ class Order {
 async function main() {
 	// let candles = await getCandles()
 	// let testdb = await getBacktestDB();
-	// await write(testdb, 'D:/Documents HDD/learnJS/wolfstreetbot/fileTest/h1t2019.txt');
-	let db = await read('D:/Documents HDD/learnJS/wolfstreetbot/fileTest/2021h1.txt');
+	
+	// await write(testdb, 'D:/Documents HDD/learnJS/wolfstreetbot/fileTest/2021h1.txt');
+	// await write(testdb, '/mnt/nfs/homes/qgimenez/Documents/WolfStreetBot/fileTest/2018h4.txt');
+	
+	// let db = await read('D:/Documents HDD/learnJS/wolfstreetbot/fileTest/2021h1.txt');
+	let db = await read('/mnt/nfs/homes/qgimenez/Documents/WolfStreetBot/fileTest/2018h1.txt');
+
 	let candles = [];
 
 	let position = false;
