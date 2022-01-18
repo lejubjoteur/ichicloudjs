@@ -20,7 +20,8 @@ async function getBacktestDB() {
 	let db = [];
 	let timestamp = Date.parse('01 jan 2018');
 	for (let i = 0; i < 10; i++) {
-		let response = await client.klines('BTCUSDT', '4h', {startTime: timestamp, limit: 1000})
+		let response = await client.klines('ETHUSDT', '1h', {startTime: timestamp, limit: 1000})
+		// let response = await client.klines('USDCUSDT', '1h', {startTime: timestamp, limit: 1000})
 		db.push(...response.data)
 		timestamp = response.data[response.data.length - 1][0];
 	}
@@ -167,10 +168,10 @@ async function ichimokuCloud(candles) {
 
 class Order {
 	profit = 0
-	leverage = 1
+	leverage = 5
 	currentPrice = 0
 	endDate
-	fees = 0
+	fees = 0.04
 
 	constructor(startDate, priceOrder, stopLoss, takeProfit, long) {
 		this.startDate = startDate;
@@ -188,6 +189,9 @@ class Order {
 		console.log(this.endDate)
 		console.log("Current price : " + this.currentPrice)
 		console.log("LOOSE " + this.profit)
+		let gain = wallet / 10 / 100 * this.profit - wallet / 10 / 100 * this.fees
+		console.log("cash : ", gain)
+		wallet += gain
 	}
 
 	goodTrade() {
@@ -198,6 +202,9 @@ class Order {
 		console.log(this.endDate)
 		console.log("Current price : " + this.currentPrice)
 		console.log("WIN " + this.profit)
+		let gain = wallet / 10 / 100 * this.profit - wallet / 10 / 100 * this.fees
+		console.log("cash : ", gain)
+		wallet += gain
 	}
 
 	cancelOrder() {
@@ -208,29 +215,33 @@ class Order {
 		console.log(this.endDate)
 		console.log("Current price : " + this.currentPrice)
 		console.log("CANCELED ! Profit : " + this.profit)
+		let gain = wallet / 10 / 100 * this.profit - wallet / 10 / 100 * this.fees
+		console.log("cash : ", gain)
+		wallet += gain
 	}
 }
 
 // --------------- Backtest environment ---------------
 
+let wallet = 100;
+
 async function main() {
 	// let candles = await getCandles()
 	// let testdb = await getBacktestDB();
 	
-	// await write(testdb, 'D:/Documents HDD/learnJS/wolfstreetbot/fileTest/2021h1.txt');
+	// await write(testdb, 'D:/Documents HDD/learnJS/wolfstreetbot/fileTest/ETH2018h1.txt');
 	// await write(testdb, '/mnt/nfs/homes/qgimenez/Documents/WolfStreetBot/fileTest/2018h4.txt');
 	
 	let db = await read('D:/Documents HDD/learnJS/wolfstreetbot/fileTest/2021h1.txt');
 	// let db = await read('/mnt/nfs/homes/qgimenez/Documents/WolfStreetBot/fileTest/2018h1.txt');
 
 	let candles = [];
-
 	let position = false;
 
 	while (db.length > 250) {
 		candles = db.slice(0, 250)
 		if (!position)
-			position = await ichimokuCloud(candles);
+			position = await ichimokuCloud(candles, wallet);
 		else {
 			let lastOrder = orders.slice(-1)[0]
 			let lastCandle = candles.slice(-1)[0]
@@ -268,6 +279,7 @@ async function main() {
 	console.log("Trades Win : " + tradesWin)
 	console.log("Orders : " + orders.length)
 	console.log("Winrate : " + (tradesWin / orders.length * 100).toFixed(2) + "%")
+	console.log("CASH : ", wallet)
 }
 
 main();
