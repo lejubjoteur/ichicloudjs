@@ -181,6 +181,10 @@ class Order {
 		this.long = long;
 	}
 
+	getGain() {
+		return wallet * (this.profit / 100) - wallet * (this.fees / 100)
+	}
+
 	badTrade() {
 		this.profit = (this.priceOrder - this.stopLoss) * 100 / this.priceOrder;
 		if (this.long)
@@ -189,7 +193,7 @@ class Order {
 		console.log(this.endDate)
 		console.log("Current price : " + this.currentPrice)
 		console.log("LOOSE " + this.profit)
-		let gain = wallet / 10 / 100 * this.profit - wallet / 10 / 100 * this.fees
+		let gain = this.getGain()
 		console.log("cash : ", gain)
 		wallet += gain
 	}
@@ -202,7 +206,7 @@ class Order {
 		console.log(this.endDate)
 		console.log("Current price : " + this.currentPrice)
 		console.log("WIN " + this.profit)
-		let gain = wallet / 10 / 100 * this.profit - wallet / 10 / 100 * this.fees
+		let gain = this.getGain()
 		console.log("cash : ", gain)
 		wallet += gain
 	}
@@ -215,7 +219,7 @@ class Order {
 		console.log(this.endDate)
 		console.log("Current price : " + this.currentPrice)
 		console.log("CANCELED ! Profit : " + this.profit)
-		let gain = wallet / 10 / 100 * this.profit - wallet / 10 / 100 * this.fees
+		let gain = this.getGain()
 		console.log("cash : ", gain)
 		wallet += gain
 	}
@@ -232,8 +236,8 @@ async function main() {
 	// await write(testdb, 'D:/Documents HDD/learnJS/wolfstreetbot/fileTest/ETH2018h1.txt');
 	// await write(testdb, '/mnt/nfs/homes/qgimenez/Documents/WolfStreetBot/fileTest/2018h4.txt');
 	
-	let db = await read('D:/Documents HDD/learnJS/wolfstreetbot/fileTest/2021h1.txt');
-	// let db = await read('/mnt/nfs/homes/qgimenez/Documents/WolfStreetBot/fileTest/2018h1.txt');
+	// let db = await read('D:/Documents HDD/learnJS/wolfstreetbot/fileTest/2021h1.txt');
+	let db = await read('/mnt/nfs/homes/qgimenez/Documents/WolfStreetBot/fileTest/2021h1.txt');
 
 	let candles = [];
 	let position = false;
