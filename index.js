@@ -1,15 +1,15 @@
 require('dotenv').config
 const { Spot } = require('@binance/connector')
 
-const apiKey = 'p7KiUy19KhoaeVwfi40qpmFiOppqdRcK0mqJfhjqDgheb66RJGAYQfexJ42cvyNk'
-const apiSecret = 'Pl3FFVCZa0bFL6NKuJp2ustRfJeHyJ06a0OGUZBTaC8oDOvGlC0jm9ghMgKmzzs1'
+const apiKey = process.env.API_KEY
+const apiSecret = process.env.API_SECRET
 const client = new Spot(apiKey, apiSecret)
 const fs = require('fs')
 
 // --------------- Request API to get Candles ---------------
 
 async function getCandles() {
-	const response = await client.klines('BTCUSDT', '5m', {limit: 200})
+	const response = await client.klines('BTCUSDT', '1h', {limit: 200})
 	const data = response.data
 	return data
 }
@@ -18,7 +18,7 @@ async function getCandles() {
 
 async function getBacktestDB() {
 	let db = [];
-	let timestamp = Date.parse('01 jan 2018');
+	let timestamp = Date.parse('01 jan 2022');
 	for (let i = 0; i < 10; i++) {
 		let response = await client.klines('ETHUSDT', '1h', {startTime: timestamp, limit: 1000})
 		// let response = await client.klines('USDCUSDT', '1h', {startTime: timestamp, limit: 1000})
@@ -231,13 +231,13 @@ let wallet = 100;
 
 async function main() {
 	// let candles = await getCandles()
-	// let testdb = await getBacktestDB();
+	let testdb = await getBacktestDB();
 	
-	// await write(testdb, 'D:/Documents HDD/learnJS/wolfstreetbot/fileTest/ETH2018h1.txt');
+	await write(testdb, 'D:/Documents HDD/learnJS/wolfstreetbot/fileTest/ETH2022h1.txt');
 	// await write(testdb, '/mnt/nfs/homes/qgimenez/Documents/WolfStreetBot/fileTest/2018h4.txt');
 	
-	// let db = await read('D:/Documents HDD/learnJS/wolfstreetbot/fileTest/2021h1.txt');
-	let db = await read('/mnt/nfs/homes/qgimenez/Documents/WolfStreetBot/fileTest/2021h1.txt');
+	let db = await read('D:/Documents HDD/learnJS/wolfstreetbot/fileTest/ETH2022h1.txt');
+	// let db = await read('/mnt/nfs/homes/qgimenez/Documents/WolfStreetBot/fileTest/2021h1.txt');
 
 	let candles = [];
 	let position = false;
